@@ -18,7 +18,7 @@ To list the Yubikeys connected to your machine, run:
 yubikey-sign-csr --list-keys
 ```
 
-By default, the first key (if any) will be used.
+By default, the first key (if any) will be used, and will use the signature slot (9c).
 
 To sign a CSR, run:
 
@@ -33,3 +33,5 @@ If your private key requires a PIN, it will be requested.
 If your private key requires touch, you must touch your YubiKey before the certificate will be generated.
 
 To specify key usage, use `--ca`, `--server` and/or `--client` to generate a certificate that is a certificate authority, can be used for server authentication, and/or can be used for client authentication.
+
+To specify a different slot, use `--slot`.

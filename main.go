@@ -23,6 +23,7 @@ func main() {
 	var (
 		listKeys = flag.Bool("list-keys", false, "list yubikeys")
 		keyID    = flag.Int("key", 0, "id of yubikey from --list-keys")
+		slotType = flag.String("slot", "9c", "key type of slot on yubikey")
 		csrPath  = flag.String("csr", "csr.pem", "path to certificate signing request")
 		isCA     = flag.Bool("ca", false, "certificate is to be an authority")
 		isServer = flag.Bool("server", false, "certificate is to be used as a server")
@@ -53,6 +54,11 @@ func main() {
 		exitError(1, "no key id %d", *keyID)
 	}
 
+	slot, ok := getSlot(*slotType)
+	if !ok {
+		exitError(1, "unknown slot type %q", slotType)
+	}
+
 	csr, err := readCSR(*csrPath)
 	if err != nil {
 		exitError(1, "could not read CSR: %s", err)
@@ -68,18 +74,13 @@ func main() {
 		exitError(1, "could not open card: %s", err)
 	}
 
-	caCert, err := yk.Certificate(piv.SlotSignature)
+	caCert, err := yk.Certificate(slot)
 	if errors.Is(err, piv.ErrNotFound) {
 		exitError(1, "no certificate configured on signature slot")
 	}
 
-	pin, err := readPIN()
-	if err != nil {
-		exitError(1, "could not read pin: %s", err)
-	}
-
-	caPriv, err := yk.PrivateKey(piv.SlotSignature, caCert.PublicKey, piv.KeyAuth{
-		PIN: pin,
+	caPriv, err := yk.PrivateKey(slot, caCert.PublicKey, piv.KeyAuth{
+		PINPrompt: readPIN,
 	})
 	if errors.Is(err, piv.ErrNotFound) {
 		exitError(1, "no private key configured on signature slot")
@@ -192,4 +193,19 @@ func sha1publicKey(pub crypto.PublicKey) ([]byte, error) {
 	sum := sha1.Sum(bytes)
 
 	return sum[:], nil
+}
+
+func getSlot(id string) (piv.Slot, bool) {
+	switch id {
+	case "9a":
+		return piv.SlotAuthentication, true
+	case "9c":
+		return piv.SlotSignature, true
+	case "9e":
+		return piv.SlotCardAuthentication, true
+	case "9d":
+		return piv.SlotKeyManagement, true
+	default:
+		return piv.Slot{}, false
+	}
 }
