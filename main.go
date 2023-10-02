@@ -24,7 +24,9 @@ func main() {
 		listKeys = flag.Bool("list-keys", false, "list yubikeys")
 		keyID    = flag.Int("key", 0, "id of yubikey from --list-keys")
 		csrPath  = flag.String("csr", "csr.pem", "path to certificate signing request")
-		isCA     = flag.Bool("ca", false, "certificate is an authority")
+		isCA     = flag.Bool("ca", false, "certificate is to be an authority")
+		isServer = flag.Bool("server", false, "certificate is to be used as a server")
+		isClient = flag.Bool("client", false, "certificate is to be used as a client")
 		validity = flag.String("validity", "8766h", "duration certificate will be valid for")
 	)
 
@@ -106,6 +108,22 @@ func main() {
 		EmailAddresses:        csr.EmailAddresses,
 		IPAddresses:           csr.IPAddresses,
 		URIs:                  csr.URIs,
+	}
+
+	if *isCA || *isServer || *isClient {
+		cert.KeyUsage = x509.KeyUsageDigitalSignature
+	}
+
+	if *isCA {
+		cert.KeyUsage |= x509.KeyUsageCRLSign | x509.KeyUsageCertSign
+	}
+
+	if *isServer {
+		cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
+	}
+
+	if *isClient {
+		cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
 	}
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, cert, caCert, caCert.PublicKey, caPriv)
