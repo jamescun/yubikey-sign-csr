@@ -101,6 +101,7 @@ func main() {
 		Subject:               csr.Subject,
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(notAfter),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		BasicConstraintsValid: true,
 		IsCA:                  *isCA,
 		Extensions:            csr.Extensions,
@@ -109,10 +110,6 @@ func main() {
 		EmailAddresses:        csr.EmailAddresses,
 		IPAddresses:           csr.IPAddresses,
 		URIs:                  csr.URIs,
-	}
-
-	if *isCA || *isServer || *isClient {
-		cert.KeyUsage = x509.KeyUsageDigitalSignature
 	}
 
 	if *isCA {
@@ -127,7 +124,7 @@ func main() {
 		cert.ExtKeyUsage = append(cert.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, caCert, caCert.PublicKey, caPriv)
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, caCert, csr.PublicKey, caPriv)
 	if err != nil {
 		exitError(1, "could not create certificate: %s", err)
 	}
